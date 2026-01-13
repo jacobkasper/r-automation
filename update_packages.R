@@ -35,5 +35,5 @@ tryCatch({
 cat("\n\nUpdate completed:", as.character(Sys.time()), "\n")
 sink()
 
-# Email the log
-system(paste0("mail -s 'R Package Update Report' jacob.matthew.kasper@hafogvatn.is < ", path.expand(log_file)))
+# Email the log - change to your email
+system(paste0("mail -s 'R Package Update Report' YOUR_EMAIL@hafogvatn.is < ", path.expand(log_file)))
