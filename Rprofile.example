@@ -1,0 +1,45 @@
+table <- function (..., useNA = 'ifany') base::table(..., useNA = useNA)
+options(repos = c(CRAN = "https://cran.hafro.is/"))
+
+# Ensure personal library exists
+local({
+  lib <- Sys.getenv("R_LIBS_USER")
+  if (!dir.exists(lib)) {
+    dir.create(lib, recursive = TRUE)
+  }
+})
+
+# Daily package update check
+local({
+  update_file <- path.expand("~/.last_pkg_update")
+  today <- Sys.Date()
+  
+  should_update <- TRUE
+  if (file.exists(update_file)) {
+    last_update <- as.Date(readLines(update_file, n = 1, warn = FALSE))
+    should_update <- (today > last_update)
+  }
+  
+  if (should_update && interactive()) {
+    # Remove stale lock directories
+    lib_paths <- .libPaths()
+    for (lib in lib_paths) {
+      locks <- list.files(lib, pattern = "^00LOCK", full.names = TRUE)
+      if (length(locks) > 0) {
+        message("Removing stale locks: ", paste(locks, collapse = ", "))
+        unlink(locks, recursive = TRUE)
+      }
+    }
+    
+    message("Checking for package updates...")
+    try(utils::update.packages(lib.loc = .libPaths()[1], ask = FALSE, checkBuilt = TRUE))
+	
+    if (requireNamespace("remotes", quietly = TRUE)) {
+      message("Checking GitHub packages...")
+      try(remotes::update_packages(upgrade = "always"))
+    }
+    
+    writeLines(as.character(today), update_file)
+  }
+})
+message("End of .Rprofile")
