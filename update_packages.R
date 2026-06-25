@@ -101,5 +101,5 @@ writeLines(summary_lines, summary_file)
 cat("\n\nUpdate completed:", as.character(finished), "\n")
 
 # Email only the summary (on.exit handles sink teardown afterward)
-system(paste0("mail -s \"R Package Update Report\" youremail@domain.com < ",
+system(paste0("mail -s \"R Package Update Report\" jacob.matthew.kasper@hafogvatn.is < ",
               shQuote(summary_file)))
