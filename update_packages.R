@@ -2,6 +2,10 @@
 log_file     <- path.expand("~/R/logs/update_packages.log")
 summary_file <- path.expand("~/R/logs/update_summary.log")
 dir.create(path.expand("~/R/logs"), showWarnings = FALSE, recursive = TRUE)
+# Packages that cannot be built on this server (e.g. system-library too old).
+# These are skipped entirely so a failing rebuild can't clobber a working
+# pinned install. Revisit if the system GDAL is upgraded (see README).
+blocked <- c("terra", "mapgl")
 
 log_con <- file(log_file, open = "wt")          # full verbose log on disk
 sink(log_con, type = "output")
@@ -44,16 +48,24 @@ withCallingHandlers({
 
   cat("\n--- CRAN Updates ---\n")
   tryCatch({
-    old <- utils::old.packages(lib.loc = .libPaths()[1])
-    if (!is.null(old) && nrow(old) > 0) {
-      cat(nrow(old), "package(s) to update:", paste(old[, "Package"], collapse = ", "), "\n")
-    } else {
-      cat("No CRAN packages need updating.\n")
-    }
-    utils::update.packages(lib.loc = .libPaths()[1], ask = FALSE,
-                           checkBuilt = TRUE, INSTALL_opts = "--no-lock",
-                           quiet = TRUE)
-  }, error = function(e) cat("Error:", conditionMessage(e), "\n"))
+			old <- utils::old.packages(lib.loc = .libPaths()[1])
+		  if (!is.null(old) && nrow(old) > 0) {
+			skip <- rownames(old) %in% blocked
+			if (any(skip)) {
+			  cat("Skipping (pinned/blocked):", paste(rownames(old)[skip], collapse = ", "), "\n")
+			  old <- old[!skip, , drop = FALSE]
+			}
+			if (nrow(old) > 0) {
+			  cat(nrow(old), "package(s) to update:", paste(old[, "Package"], collapse = ", "), "\n")
+			  utils::install.packages(rownames(old), lib = .libPaths()[1],
+									  INSTALL_opts = "--no-lock", quiet = TRUE)
+			} else {
+			  cat("No CRAN packages need updating (after exclusions).\n")
+			}
+		  } else {
+			cat("No CRAN packages need updating.\n")
+		  }
+    }, error = function(e) cat("Error:", conditionMessage(e), "\n"))
 
   cat("\n--- GitHub Updates ---\n")
   tryCatch({
@@ -85,6 +97,7 @@ summary_lines <- c(
   "",
   "========== SUMMARY =========="
 )
+for (p in blocked) summary_lines <- c(summary_lines, sprintf("  skipped:   %s (pinned/blocked)", p))
 for (p in updated)     summary_lines <- c(summary_lines, sprintf("  updated:   %s (%s -> %s)", p, before[p], after[p]))
 for (p in new_install) summary_lines <- c(summary_lines, sprintf("  installed: %s (%s)", p, after[p]))
 for (p in failed)      summary_lines <- c(summary_lines, sprintf("  FAILED:    %s", p))
@@ -101,5 +114,5 @@ writeLines(summary_lines, summary_file)
 cat("\n\nUpdate completed:", as.character(finished), "\n")
 
 # Email only the summary (on.exit handles sink teardown afterward)
-system(paste0("mail -s \"R Package Update Report\" jacob.matthew.kasper@hafogvatn.is < ",
+system(paste0("mail -s \"R Package Update Report\" email@example.com < ",
               shQuote(summary_file)))
