@@ -5,7 +5,7 @@ dir.create(path.expand("~/R/logs"), showWarnings = FALSE, recursive = TRUE)
 # Packages that cannot be built on this server (e.g. system-library too old).
 # These are skipped entirely so a failing rebuild can't clobber a working
 # pinned install. Revisit if the system GDAL is upgraded (see README).
-blocked <- c("terra", "mapgl")
+blocked <- c("terra", "mapgl", "tmap")
 
 log_con <- file(log_file, open = "wt")          # full verbose log on disk
 sink(log_con, type = "output")
@@ -114,5 +114,5 @@ writeLines(summary_lines, summary_file)
 cat("\n\nUpdate completed:", as.character(finished), "\n")
 
 # Email only the summary (on.exit handles sink teardown afterward)
-system(paste0("mail -s \"R Package Update Report\" email@example.com < ",
+system(paste0("mail -s \"R Package Update Report\" jacob.matthew.kasper@hafogvatn.is < ",
               shQuote(summary_file)))
